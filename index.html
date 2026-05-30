@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>SPrider Definitive</title>
+<title>SPrider Definitive - Soundtrack Edition</title>
 <style>
     :root {
         --table-color: #0b3d1f;
@@ -27,7 +27,7 @@
     .input-group { margin-bottom: 20px; text-align: left; }
     .input-group label { display: block; margin-bottom: 8px; color: #d1d5db; font-size: 1rem; font-weight: bold; }
     .input-group input, .input-group select { width: 100%; padding: 14px; border-radius: 8px; border: 2px solid #5a4036; background: rgba(0,0,0,0.5); color: white; font-size: 1.1rem; outline: none; transition: border-color 0.3s; }
-    .input-group input:focus, .input-group select:focus { border-color: var(--gold); }
+    .input-group input:focus, .input-group select:focus { border-color: var(--gold); box-shadow: 0 0 10px rgba(251,191,36,0.3); }
     .btn-start { background: linear-gradient(to bottom, #10b981, #059669); color: white; border: 2px solid #34d399; padding: 18px 30px; font-size: 1.3rem; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; box-shadow: 0 10px 20px rgba(0,0,0,0.4); transition: transform 0.1s, filter 0.2s; text-transform: uppercase; letter-spacing: 1px; }
     .btn-start:hover { filter: brightness(1.2); }
     .btn-start:active { transform: scale(0.95); }
@@ -97,6 +97,10 @@
             <input type="text" id="player-name" placeholder="Ex: Mestre das Cartas" autocomplete="off" maxlength="20">
         </div>
         <div class="input-group">
+            <label for="yt-url">Trilha Sonora (YouTube URL Opcional):</label>
+            <input type="text" id="yt-url" placeholder="Cole o link do YouTube aqui..." autocomplete="off">
+        </div>
+        <div class="input-group">
             <label for="menu-mode">Nível de Ameaça:</label>
             <select id="menu-mode">
                 <option value="1">Pacífico (1 Naipe)</option>
@@ -144,11 +148,21 @@
     <div id="super-spider">🕷️</div>
 </div>
 <script>
+    console.log("%c mka passou por aqui ;)", "color: #00ff00; font-size: 20px; font-weight: bold; text-shadow: 0 0 10px #00ff00;");
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     let audioCtx;
     let isMusicPlaying = true;
+    let activeAudioSource = 'none';
+    let ytPlaying = false;
+    let ytPlayerIframe = null;
     const lofiAudio = document.getElementById('lofi-music');
     lofiAudio.volume = 0.3;
+
+    function extractYouTubeID(url) {
+        const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[7].length === 11) ? match[7] : false;
+    }
 
     function initAudio() {
         if (!audioCtx) audioCtx = new AudioContext();
@@ -263,7 +277,7 @@
     let gameState = { columns: Array(10).fill().map(() => []), stock: [], score: 500, highScore: 0, moves: 0, seconds: 0, playerName: 'AGENTE', mode: 1 };
     let comboTimes = []; let draggedCards = []; let ghostElement = null; let sourceColIndex = null; let sourceCardIndex = null; let timerInterval = null; let idleSeconds = 0; let ticTacToePlayed = false; let lastScoreForCombo = 500;
     
-    const menuScreen = document.getElementById('menu-screen'); const gameHeader = document.getElementById('game-header'); const boardEl = document.getElementById('board'); const boardGrid = document.getElementById('board-grid'); const gameFooter = document.getElementById('game-footer'); const nameInput = document.getElementById('player-name'); const modeSelectMenu = document.getElementById('menu-mode'); const startBtn = document.getElementById('start-btn'); const displayNameEl = document.getElementById('display-name'); const toggleMusicBtn = document.getElementById('toggle-music'); const newGameInGameBtn = document.getElementById('new-game-in-game'); const scoreEl = document.getElementById('score'); const highScoreEl = document.getElementById('highscore'); const timerEl = document.getElementById('timer'); const stockEl = document.getElementById('stock'); const spiderContainer = document.getElementById('spider-container'); const helpBtn = document.getElementById('help-btn'); const tttModal = document.getElementById('ttt-modal'); const tttGrid = document.getElementById('ttt-grid'); const closeTttBtn = document.getElementById('close-ttt'); const winScreen = document.getElementById('win-screen'); const winStats = document.getElementById('win-stats'); const superSpider = document.getElementById('super-spider'); const winBoxContent = document.getElementById('win-box-content');
+    const menuScreen = document.getElementById('menu-screen'); const gameHeader = document.getElementById('game-header'); const boardEl = document.getElementById('board'); const boardGrid = document.getElementById('board-grid'); const gameFooter = document.getElementById('game-footer'); const nameInput = document.getElementById('player-name'); const ytInput = document.getElementById('yt-url'); const modeSelectMenu = document.getElementById('menu-mode'); const startBtn = document.getElementById('start-btn'); const displayNameEl = document.getElementById('display-name'); const toggleMusicBtn = document.getElementById('toggle-music'); const newGameInGameBtn = document.getElementById('new-game-in-game'); const scoreEl = document.getElementById('score'); const highScoreEl = document.getElementById('highscore'); const timerEl = document.getElementById('timer'); const stockEl = document.getElementById('stock'); const spiderContainer = document.getElementById('spider-container'); const helpBtn = document.getElementById('help-btn'); const tttModal = document.getElementById('ttt-modal'); const tttGrid = document.getElementById('ttt-grid'); const closeTttBtn = document.getElementById('close-ttt'); const winScreen = document.getElementById('win-screen'); const winStats = document.getElementById('win-stats'); const superSpider = document.getElementById('super-spider'); const winBoxContent = document.getElementById('win-box-content');
 
     let tttBoardState = Array(9).fill(''); let tttActive = false;
 
@@ -274,11 +288,34 @@
         if (savedMode) modeSelectMenu.value = savedMode;
         const savedScore = localStorage.getItem('sprider_highscore_v2');
         if (savedScore) gameState.highScore = parseInt(savedScore);
+        const savedYt = localStorage.getItem('sprider_yt_v2');
+        if (savedYt) ytInput.value = savedYt;
     };
 
     startBtn.addEventListener('click', () => {
         initAudio();
-        if (isMusicPlaying) { lofiAudio.play().catch(() => { isMusicPlaying = false; toggleMusicBtn.textContent = '🔇'; }); }
+        const rawYtUrl = ytInput.value.trim();
+        const extractedId = extractYouTubeID(rawYtUrl);
+        
+        if(extractedId) {
+            localStorage.setItem('sprider_yt_v2', rawYtUrl);
+            activeAudioSource = 'yt';
+            ytPlaying = true;
+            if(ytPlayerIframe) ytPlayerIframe.remove();
+            ytPlayerIframe = document.createElement('iframe');
+            ytPlayerIframe.style.display = 'none';
+            ytPlayerIframe.width = "0"; ytPlayerIframe.height = "0";
+            ytPlayerIframe.src = `https://www.youtube.com/embed/${extractedId}?autoplay=1&loop=1&playlist=${extractedId}&enablejsapi=1`;
+            ytPlayerIframe.frameBorder = "0";
+            ytPlayerIframe.allow = "autoplay";
+            document.body.appendChild(ytPlayerIframe);
+            toggleMusicBtn.textContent = '🎵';
+            lofiAudio.pause();
+        } else {
+            activeAudioSource = 'lofi';
+            if (isMusicPlaying) { lofiAudio.play().catch(() => { isMusicPlaying = false; toggleMusicBtn.textContent = '🔇'; }); }
+        }
+
         gameState.playerName = nameInput.value.trim().toUpperCase() || 'AGENTE';
         gameState.mode = parseInt(modeSelectMenu.value);
         localStorage.setItem('sprider_name_v2', gameState.playerName);
@@ -289,8 +326,20 @@
     });
 
     toggleMusicBtn.addEventListener('click', () => {
-        if (isMusicPlaying) { lofiAudio.pause(); toggleMusicBtn.textContent = '🔇'; } else { lofiAudio.play(); toggleMusicBtn.textContent = '🎵'; }
-        isMusicPlaying = !isMusicPlaying;
+        if(activeAudioSource === 'yt') {
+            if(ytPlaying) {
+                ytPlayerIframe.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+                ytPlaying = false;
+                toggleMusicBtn.textContent = '🔇';
+            } else {
+                ytPlayerIframe.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+                ytPlaying = true;
+                toggleMusicBtn.textContent = '🎵';
+            }
+        } else {
+            if (isMusicPlaying) { lofiAudio.pause(); toggleMusicBtn.textContent = '🔇'; } else { lofiAudio.play(); toggleMusicBtn.textContent = '🎵'; }
+            isMusicPlaying = !isMusicPlaying;
+        }
     });
 
     newGameInGameBtn.addEventListener('click', () => {
@@ -562,7 +611,7 @@
             superSpider.style.animation = 'superSpiderEat 5s forwards';
             setTimeout(() => { winBoxContent.style.display = 'none'; }, 2000);
             setTimeout(() => {
-                winScreen.style.display = 'none'; superSpider.style.animation = 'none'; gameHeader.style.display = 'none'; boardEl.style.display = 'none'; gameFooter.style.display = 'none'; menuScreen.style.display = 'flex'; menuScreen.style.opacity = '1'; localStorage.removeItem('sprider_state_v2'); canvas.style.display = 'none';
+                winScreen.style.display = 'none'; superSpider.style.animation = 'none'; gameHeader.style.display = 'none'; boardEl.style.display = 'none'; gameFooter.style.display = 'none'; menuScreen.style.display = 'flex'; menuScreen.style.opacity = '1'; localStorage.removeItem('sprider_state_v2'); canvas.style.display = 'none'; if(ytPlayerIframe) { ytPlayerIframe.remove(); ytPlayerIframe = null; activeAudioSource = 'none'; }
             }, 5000);
         }, 4000);
     }
