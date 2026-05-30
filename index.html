@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SPrider</title>
+<style>
+    :root {
+        --table-color: #0b3d1f;
+        --table-light: #166534;
+        --wood-panel: #271c19;
+        --text-light: #f8fafc;
+        --gold: #fbbf24;
+        --card-bg: #fdfdfd;
+        --card-back: #0f172a;
+        --card-red: #dc2626;
+        --card-black: #171717;
+        --shadow-soft: 0 4px 6px rgba(0,0,0,0.3);
+        --shadow-hover: 0 10px 20px rgba(0,0,0,0.5);
+    }
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+        background: radial-gradient(circle at 50% 30%, var(--table-light), var(--table-color));
+        color: var(--text-light);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
+
+    /* MENU INICIAL */
+    #menu-screen {
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(10px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+        transition: opacity 0.5s;
+    }
+    .menu-box {
+        background: linear-gradient(145deg, #3a2a26, var(--wood-panel));
+        padding: 40px;
+        border-radius: 12px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+        text-align: center;
+        border: 2px solid #5a4036;
+        width: 90%;
+        max-width: 400px;
+    }
+    .menu-box h1 {
+        font-size: 3rem;
+        color: var(--gold);
+        margin-bottom: 20px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        font-family: 'Georgia', serif;
+    }
+    .input-group {
+        margin-bottom: 20px;
+        text-align: left;
+    }
+    .input-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: #d1d5db;
+        font-size: 0.9rem;
+    }
+    .input-group input, .input-group select {
+        width: 100%;
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid #5a4036;
+        background: rgba(0,0,0,0.3);
+        color: white;
+        font-size: 1.1rem;
+        outline: none;
+    }
+    .input-group input:focus { border-color: var(--gold); }
+    .btn-start {
+        background: linear-gradient(to bottom, #10b981, #059669);
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 1.2rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        width: 100%;
+        box-shadow: var(--shadow-soft);
+        transition: transform 0.1s, filter 0.2s;
+    }
+    .btn-start:hover { filter: brightness(1.2); }
+    .btn-start:active { transform: scale(0.95); }
+
+    /* CABEÇALHO (JOGO) */
+    header {
+        background: linear-gradient(to bottom, #3a2a26, var(--wood-panel));
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 3px solid #1a1210;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+        z-index: 10;
+    }
+    .brand {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--gold);
+        font-family: 'Georgia', serif;
+    }
+    .player-info {
+        font-size: 1rem;
+        color: #d1d5db;
+    }
+    .stats {
+        display: flex;
+        gap: 20px;
+        font-size: 1.1rem;
+        font-weight: bold;
+    }
+    .stats span span { color: var(--gold); }
+    .controls { display: flex; gap: 10px; align-items: center; }
+    button.small-btn {
+        background: linear-gradient(to bottom, #4b5563, #374151);
+        color: white;
+        border: 1px solid #1f2937;
+        padding: 8px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        box-shadow: var(--shadow-soft);
+    }
+    button.small-btn:active { transform: scale(0.95); }
+
+    /* TABULEIRO */
+    .game-board {
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 1vw;
+        padding: 20px 1vw;
+        overflow-y: auto;
+        position: relative;
+    }
+    .column {
+        min-height: 140px;
+        position: relative;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+    }
+
+    /* CARTAS */
+    .card {
+        width: 100%;
+        aspect-ratio: 2.5/3.5;
+        background: linear-gradient(135deg, var(--card-bg) 0%, #f0f0f0 100%);
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.8);
+        position: absolute;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 6px;
+        font-size: clamp(16px, 2.2vw, 26px);
+        font-family: 'Arial', sans-serif;
+        font-weight: bold;
+        cursor: grab;
+        border: 1px solid #ccc;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:active { cursor: grabbing; }
+    .card:hover:not(.hidden) {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-hover);
+    }
+    .card.hidden {
+        background: radial-gradient(circle at center, #1e293b, var(--card-back));
+        background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.05) 5px, rgba(255,255,255,0.05) 10px);
+        border: 2px solid #cbd5e1;
+        cursor: default;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    .card.hidden .content { display: none; }
+    .card.red { color: var(--card-red); }
+    .card.black { color: var(--card-black); }
+    .card-top { text-align: left; line-height: 1; }
+    .card-bottom { text-align: right; transform: rotate(180deg); line-height: 1; }
+    .card-center {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: clamp(28px, 4.5vw, 50px);
+    }
+
+    /* BARRA INFERIOR */
+    .bottom-bar {
+        background: linear-gradient(to top, #3a2a26, var(--wood-panel));
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 3px solid #1a1210;
+        box-shadow: 0 -4px 10px rgba(0,0,0,0.6);
+    }
+    .stock {
+        width: 65px;
+        height: 91px;
+        background: radial-gradient(circle at center, #1e293b, var(--card-back));
+        background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,0.05) 5px, rgba(255,255,255,0.05) 10px);
+        border-radius: 8px;
+        border: 2px solid #cbd5e1;
+        cursor: pointer;
+        position: relative;
+        box-shadow: var(--shadow-soft);
+        transition: transform 0.1s;
+    }
+    .stock:active { transform: scale(0.95); }
+    .stock::after {
+        content: '';
+        position: absolute;
+        top: -4px; left: -4px; right: 4px; bottom: 4px;
+        background: radial-gradient(circle at center, #1e293b, var(--card-back));
+        border-radius: 8px;
+        z-index: -1;
+        border: 1px solid #cbd5e1;
+    }
+    .stock.empty {
+        background: rgba(0,0,0,0.2);
+        border: 2px dashed rgba(255,255,255,0.2);
+        box-shadow: none;
+        cursor: default;
+    }
+    .stock.empty::after { display: none; }
+
+    /* EFEITOS ESPECIAIS */
+    #spider-container {
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        pointer-events: none;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    .spider {
+        font-size: 150px;
+        opacity: 0;
+        transform: scale(0.1);
+        filter: drop-shadow(0 20px 10px rgba(0,0,0,0.8));
+    }
+    .combo-text {
+        position: absolute;
+        font-size: 4rem;
+        color: var(--gold);
+        text-shadow: 0 4px 10px rgba(0,0,0,0.8);
+        font-weight: bold;
+        font-family: 'Georgia', serif;
+        opacity: 0;
+        transform: translateY(50px);
+    }
+    @keyframes spiderScare {
+        0% { opacity: 0; transform: scale(0.1); }
+        15% { opacity: 1; transform: scale(1.5) rotate(10deg); }
+        30% { transform: scale(1.2) rotate(-5deg); }
+        45% { transform: scale(1.4) rotate(5deg); }
+        80% { opacity: 1; transform: scale(1.3) rotate(0deg); }
+        100% { opacity: 0; transform: scale(3) translateY(-100px); }
+    }
+    @keyframes textPop {
+        0% { opacity: 0; transform: translateY(50px) scale(0.5); }
+        20% { opacity: 1; transform: translateY(0) scale(1.1); }
+        80% { opacity: 1; transform: translateY(0) scale(1); }
+        100% { opacity: 0; transform: translateY(-30px) scale(1.2); }
+    }
+    .dragging {
+        opacity: 0.95;
+        z-index: 999 !important;
+        box-shadow: 0 20px 30px rgba(0,0,0,0.7);
+        transform: scale(1.05);
+    }
+
+    /* MÚSICA TOGGLE */
+    .music-btn {
+        background: transparent;
+        border: none;
+        color: var(--gold);
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 5px;
+    }
+
+    @media (max-width: 900px) {
+        header { flex-wrap: wrap; gap: 10px; justify-content: center; }
+        .stats { width: 100%; justify-content: center; gap: 15px; font-size: 0.9rem; }
+        .card { padding: 3px; border-radius: 4px; }
+        .card-center { font-size: clamp(20px, 4vw, 35px); }
+        .menu-box { padding: 20px; }
+    }
+</style>
+</head>
+<body>
+
+<!-- Áudio Lofi (Mixkit Free Asset) -->
+<audio id="lofi-music" loop>
+    <source src="https://assets.mixkit.co/music/preview/mixkit-sleepy-cat-135.mp3" type="audio/mpeg">
+</audio>
+
+<div id="menu-screen">
+    <div class="menu-box">
+        <h1>SPrider</h1>
+        <div class="input-group">
+            <label for="player-name">Seu Nome:</label>
+            <input type="text" id="player-name" placeholder="Ex: Mestre das Cartas" autocomplete="off">
+        </div>
+        <div class="input-group">
+            <label for="menu-mode">Dificuldade:</label>
+            <select id="menu-mode">
+                <option value="1">Pacífico (1 Naipe)</option>
+                <option value="2">Super Fácil (1 Naipe)</option>
+                <option value="3">Fácil (2 Naipes)</option>
+                <option value="4">Fácil Médio (2 Naipes)</option>
+                <option value="5">Médio (4 Naipes)</option>
+                <option value="6">Difícil (4 Naipes)</option>
+            </select>
+        </div>
+        <button class="btn-start" id="start-btn">JOGAR AGORA</button>
+    </div>
+</div>
+
+<header id="game-header" style="display: none;">
+    <div class="brand">SPrider <span class="player-info" id="display-name"></span></div>
+    <div class="stats">
+        <span>Tempo: <span id="timer">00:00</span></span>
+        <span>Pontos: <span id="score">0</span></span>
+        <span>Recorde: <span id="highscore">0</span></span>
+    </div>
+    <div class="controls">
+        <button id="toggle-music" class="music-btn" title="Ligar/Desligar Música">🎵</button>
+        <button id="new-game-in-game" class="small-btn">Reiniciar</button>
+    </div>
+</header>
+
+<div class="game-board" id="board" style="display: none;"></div>
+
+<div class="bottom-bar" id="game-footer" style="display: none;">
+    <div id="foundations" style="display: flex; gap: 10px;"></div>
+    <div class="stock" id="stock"></div>
+</div>
+
+<div id="spider-container"></div>
+
+<script>
+    /* SISTEMA DE ÁUDIO REALISTA (Efeitos) */
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx;
+    let isMusicPlaying = true;
+    const lofiAudio = document.getElementById('lofi-music');
+    lofiAudio.volume = 0.4;
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playTone(freq, type, duration, vol, slideFreq) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        if (slideFreq) {
+            osc.frequency.exponentialRampToValueAtTime(slideFreq, audioCtx.currentTime + duration);
+        }
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function soundPickup() { playTone(300, 'sine', 0.1, 0.1, 400); }
+    function soundDrop() { playTone(200, 'sine', 0.1, 0.1, 150); }
+    function soundError() { playTone(150, 'sawtooth', 0.2, 0.05, 100); }
+    function soundClear() {
+        if (!audioCtx) return;
+        playTone(523.25, 'sine', 0.1, 0.1);
+        setTimeout(() => playTone(659.25, 'sine', 0.1, 0.1), 100);
+        setTimeout(() => playTone(783.99, 'sine', 0.3, 0.1), 200);
+    }
+    function soundCombo() {
+        if (!audioCtx) return;
+        let time = 0;
+        for(let i=0; i<8; i++) {
+            setTimeout(() => playTone(400 + (i*50), 'triangle', 0.1, 0.1), time);
+            time += 60;
+        }
+    }
+
+    /* ESTADO DO JOGO */
+    const suitsData = { '♠': 'black', '♥': 'red', '♣': 'black', '♦': 'red' };
+    const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    
+    let gameState = {
+        columns: Array(10).fill().map(() => []),
+        stock: [],
+        score: 500,
+        highScore: 0,
+        moves: 0,
+        seconds: 0,
+        playerName: 'Jogador',
+        mode: 1
+    };
+
+    let comboTimes = [];
+    let draggedElement = null;
+    let sourceColIndex = null;
+    let sourceCardIndex = null;
+    let timerInterval = null;
+
+    /* ELEMENTOS UI */
+    const menuScreen = document.getElementById('menu-screen');
+    const gameHeader = document.getElementById('game-header');
+    const boardEl = document.getElementById('board');
+    const gameFooter = document.getElementById('game-footer');
+    
+    const nameInput = document.getElementById('player-name');
+    const modeSelectMenu = document.getElementById('menu-mode');
+    const startBtn = document.getElementById('start-btn');
+    const displayNameEl = document.getElementById('display-name');
+    const toggleMusicBtn = document.getElementById('toggle-music');
+    const newGameInGameBtn = document.getElementById('new-game-in-game');
+    
+    const scoreEl = document.getElementById('score');
+    const highScoreEl = document.getElementById('highscore');
+    const timerEl = document.getElementById('timer');
+    const stockEl = document.getElementById('stock');
+    const spiderContainer = document.getElementById('spider-container');
+
+    /* LÓGICA DE MENU E CARREGAMENTO */
+    window.onload = () => {
+        const savedName = localStorage.getItem('sprider_name');
+        if (savedName) nameInput.value = savedName;
+        
+        const savedMode = localStorage.getItem('sprider_last_mode');
+        if (savedMode) modeSelectMenu.value = savedMode;
+
+        const savedScore = localStorage.getItem('sprider_highscore');
+        if (savedScore) gameState.highScore = parseInt(savedScore);
+    };
+
+    startBtn.addEventListener('click', () => {
+        initAudio();
+        
+        if (isMusicPlaying) {
+            lofiAudio.play().catch(() => {
+                isMusicPlaying = false;
+                toggleMusicBtn.textContent = '🔇';
+            });
+        }
+
+        gameState.playerName = nameInput.value.trim() || 'Jogador';
+        gameState.mode = parseInt(modeSelectMenu.value);
+        localStorage.setItem('sprider_name', gameState.playerName);
+        localStorage.setItem('sprider_last_mode', gameState.mode);
+        
+        displayNameEl.textContent = `| ${gameState.playerName}`;
+        
+        menuScreen.style.opacity = '0';
+        setTimeout(() => {
+            menuScreen.style.display = 'none';
+            gameHeader.style.display = 'flex';
+            boardEl.style.display = 'grid';
+            gameFooter.style.display = 'flex';
+            checkSavedGame();
+        }, 500);
+    });
+
+    toggleMusicBtn.addEventListener('click', () => {
+        if (isMusicPlaying) {
+            lofiAudio.pause();
+            toggleMusicBtn.textContent = '🔇';
+        } else {
+            lofiAudio.play();
+            toggleMusicBtn.textContent = '🎵';
+        }
+        isMusicPlaying = !isMusicPlaying;
+    });
+
+    newGameInGameBtn.addEventListener('click', () => {
+        if (confirm('Deseja iniciar uma nova partida com esta dificuldade?')) {
+            startNewGame();
+        }
+    });
+
+    function checkSavedGame() {
+        const savedState = localStorage.getItem('sprider_state');
+        if (savedState) {
+            const parsed = JSON.parse(savedState);
+            if (parsed.mode === gameState.mode && confirm('Jogo salvo encontrado nesta dificuldade. Deseja continuar?')) {
+                gameState = parsed;
+                highScoreEl.textContent = gameState.highScore;
+                timerEl.textContent = formatTime(gameState.seconds);
+                renderBoard();
+                startTimer();
+                return;
+            }
+        }
+        startNewGame();
+    }
+
+    /* MECÂNICAS PRINCIPAIS DO JOGO */
+    function formatTime(sec) {
+        const m = Math.floor(sec / 60).toString().padStart(2, '0');
+        const s = (sec % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            gameState.seconds++;
+            timerEl.textContent = formatTime(gameState.seconds);
+            saveGame();
+        }, 1000);
+    }
+
+    function startNewGame() {
+        gameState.columns = Array(10).fill().map(() => []);
+        gameState.stock = [];
+        gameState.score = 500;
+        gameState.moves = 0;
+        gameState.seconds = 0;
+        comboTimes = [];
+        
+        scoreEl.textContent = gameState.score;
+        highScoreEl.textContent = gameState.highScore;
+        timerEl.textContent = formatTime(0);
+        
+        startTimer();
+
+        let selectedSuits = [];
+        if (gameState.mode <= 2) selectedSuits = ['♠'];
+        else if (gameState.mode <= 4) selectedSuits = ['♠', '♥'];
+        else selectedSuits = ['♠', '♥', '♣', '♦'];
+
+        let deck = [];
+        const decksNeeded = 104 / 13;
+        
+        for (let i = 0; i < decksNeeded; i++) {
+            const suit = selectedSuits[i % selectedSuits.length];
+            for (let v = 0; v < values.length; v++) {
+                deck.push({ value: values[v], suit: suit, color: suitsData[suit], hidden: true, numValue: v + 1 });
+            }
+        }
+
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+
+        for (let i = 0; i < 54; i++) {
+            const colIndex = i % 10;
+            const card = deck.pop();
+            if (i >= 44) card.hidden = false;
+            gameState.columns[colIndex].push(card);
+        }
+
+        gameState.stock = deck;
+        saveGame();
+        renderBoard();
+    }
+
+    function renderBoard() {
+        boardEl.innerHTML = '';
+        const offsetStep = window.innerWidth > 900 ? 35 : 22;
+
+        gameState.columns.forEach((col, colIndex) => {
+            const colEl = document.createElement('div');
+            colEl.className = 'column';
+            colEl.dataset.col = colIndex;
+
+            col.forEach((card, cardIndex) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = `card ${card.hidden ? 'hidden' : card.color}`;
+                cardEl.style.top = `${cardIndex * offsetStep}px`;
+                cardEl.style.zIndex = cardIndex;
+                cardEl.dataset.col = colIndex;
+                cardEl.dataset.row = cardIndex;
+
+                if (!card.hidden) {
+                    cardEl.innerHTML = `
+                        <div class="content card-top">${card.value}<br/>${card.suit}</div>
+                        <div class="content card-center">${card.suit}</div>
+                        <div class="content card-bottom">${card.value}<br/>${card.suit}</div>
+                    `;
+                    cardEl.draggable = true;
+                    cardEl.addEventListener('dragstart', handleDragStart);
+                    cardEl.addEventListener('touchstart', handleTouchStart, {passive: false});
+                }
+
+                colEl.appendChild(cardEl);
+            });
+
+            colEl.addEventListener('dragover', handleDragOver);
+            colEl.addEventListener('drop', handleDrop);
+            boardEl.appendChild(colEl);
+        });
+
+        if (gameState.stock.length > 0) stockEl.classList.remove('empty');
+        else stockEl.classList.add('empty');
+        
+        scoreEl.textContent = gameState.score;
+    }
+
+    function handleDragStart(e) {
+        initAudio();
+        sourceColIndex = parseInt(this.dataset.col);
+        sourceCardIndex = parseInt(this.dataset.row);
+        
+        if (!isValidSequence(sourceColIndex, sourceCardIndex)) {
+            e.preventDefault();
+            soundError();
+            return;
+        }
+
+        soundPickup();
+        draggedElement = this;
+        setTimeout(() => this.classList.add('dragging'), 0);
+        e.dataTransfer.setData('text/plain', '');
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleTouchStart(e) {
+        initAudio();
+        sourceColIndex = parseInt(this.dataset.col);
+        sourceCardIndex = parseInt(this.dataset.row);
+        
+        if (!isValidSequence(sourceColIndex, sourceCardIndex)) {
+            soundError();
+            return;
+        }
+
+        soundPickup();
+        draggedElement = this;
+        this.classList.add('dragging');
+        
+        const touch = e.touches[0];
+        const offsetX = touch.clientX - this.getBoundingClientRect().left;
+        const offsetY = touch.clientY - this.getBoundingClientRect().top;
+
+        const moveHandler = (ev) => {
+            ev.preventDefault();
+            const t = ev.touches[0];
+            draggedElement.style.position = 'fixed';
+            draggedElement.style.left = `${t.clientX - offsetX}px`;
+            draggedElement.style.top = `${t.clientY - offsetY}px`;
+        };
+
+        const endHandler = (ev) => {
+            document.removeEventListener('touchmove', moveHandler);
+            document.removeEventListener('touchend', endHandler);
+            
+            draggedElement.style.position = 'absolute';
+            draggedElement.style.left = '';
+            draggedElement.style.top = '';
+            draggedElement.classList.remove('dragging');
+
+            const t = ev.changedTouches[0];
+            const targetEl = document.elementFromPoint(t.clientX, t.clientY);
+            const dropCol = targetEl ? targetEl.closest('.column') : null;
+
+            if (dropCol) executeMove(parseInt(dropCol.dataset.col));
+            else soundError();
+            draggedElement = null;
+        };
+
+        document.addEventListener('touchmove', moveHandler, {passive: false});
+        document.addEventListener('touchend', endHandler);
+    }
+
+    function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        if (draggedElement) {
+            draggedElement.classList.remove('dragging');
+            executeMove(parseInt(this.dataset.col));
+            draggedElement = null;
+        }
+    }
+
+    function isValidSequence(colIdx, startRowIdx) {
+        const col = gameState.columns[colIdx];
+        for (let i = startRowIdx; i < col.length - 1; i++) {
+            if (col[i].suit !== col[i+1].suit || col[i].numValue !== col[i+1].numValue + 1) return false;
+        }
+        return true;
+    }
+
+    function canDrop(targetColIndex) {
+        const targetCol = gameState.columns[targetColIndex];
+        const movingCard = gameState.columns[sourceColIndex][sourceCardIndex];
+        if (targetCol.length === 0) return true;
+        return targetCol[targetCol.length - 1].numValue === movingCard.numValue + 1;
+    }
+
+    function executeMove(targetColIndex) {
+        if (sourceColIndex === targetColIndex || !canDrop(targetColIndex)) {
+            soundError();
+            return;
+        }
+
+        soundDrop();
+        const movingCards = gameState.columns[sourceColIndex].splice(sourceCardIndex);
+        gameState.columns[targetColIndex].push(...movingCards);
+        
+        gameState.score = Math.max(0, gameState.score - 1);
+        gameState.moves++;
+
+        const oldCol = gameState.columns[sourceColIndex];
+        if (oldCol.length > 0 && oldCol[oldCol.length - 1].hidden) {
+            oldCol[oldCol.length - 1].hidden = false;
+        }
+
+        registerMoveForCombo();
+        checkSequenceCompletion(targetColIndex);
+        saveGame();
+        renderBoard();
+    }
+
+    function registerMoveForCombo() {
+        const now = Date.now();
+        comboTimes.push(now);
+        comboTimes = comboTimes.filter(time => now - time <= 4000);
+        
+        if (comboTimes.length >= 5) {
+            triggerSpiderCombo();
+            comboTimes = [];
+        }
+    }
+
+    function triggerSpiderCombo() {
+        soundCombo();
+        const spider = document.createElement('div');
+        spider.className = 'spider';
+        spider.textContent = '🕷️';
+        spider.style.animation = 'spiderScare 2s forwards';
+
+        const text = document.createElement('div');
+        text.className = 'combo-text';
+        text.textContent = 'COMBO PERFEITO!';
+        text.style.animation = 'textPop 2s forwards';
+
+        spiderContainer.appendChild(spider);
+        spiderContainer.appendChild(text);
+        
+        gameState.score += 500;
+        
+        setTimeout(() => { spider.remove(); text.remove(); }, 2000);
+    }
+
+    function checkSequenceCompletion(colIndex) {
+        const col = gameState.columns[colIndex];
+        if (col.length < 13) return;
+
+        for (let i = col.length - 13; i >= 0; i--) {
+            let valid = true;
+            for (let j = 0; j < 12; j++) {
+                if (col[i+j].hidden || col[i+j].suit !== col[i+j+1].suit || col[i+j].numValue !== col[i+j+1].numValue + 1) {
+                    valid = false; break;
+                }
+            }
+            if (valid && col[i+12].numValue === 1 && col[i].numValue === 13) {
+                soundClear();
+                col.splice(i, 13);
+                gameState.score += 100;
+                if (col.length > 0 && col[col.length - 1].hidden) col[col.length - 1].hidden = false;
+                break;
+            }
+        }
+    }
+
+    stockEl.addEventListener('click', () => {
+        initAudio();
+        if (gameState.stock.length === 0) { soundError(); return; }
+        
+        if (gameState.columns.some(col => col.length === 0)) {
+            soundError();
+            alert('Você não pode distribuir cartas se houver colunas vazias na mesa!');
+            return;
+        }
+
+        soundDrop();
+        for (let i = 0; i < 10; i++) {
+            if (gameState.stock.length > 0) {
+                const card = gameState.stock.pop();
+                card.hidden = false;
+                gameState.columns[i].push(card);
+            }
+        }
+        
+        saveGame();
+        renderBoard();
+    });
+
+    function saveGame() {
+        if (gameState.score > gameState.highScore) {
+            gameState.highScore = gameState.score;
+            highScoreEl.textContent = gameState.highScore;
+            localStorage.setItem('sprider_highscore', gameState.highScore.toString());
+        }
+        localStorage.setItem('sprider_state', JSON.stringify(gameState));
+    }
+</script>
+</body>
+</html>
